@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dialog_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white">
+    <LinearLayout
+        android:id="@+id/dialog_content_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/white">
+
+        <ImageView
+            android:id="@+id/gifImage"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:adjustViewBounds="true"
+            android:scaleType="centerCrop"
+            android:visibility="gone"/>
+        <ImageView
+            android:id="@+id/pngImage"
+            android:layout_width="wrap_content"
+            android:layout_height="200dp"
+            android:src="@drawable/aimlogo"
+            android:visibility="gone"/>
+        <TextView
+            android:id="@+id/tv_roomNo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ロボットの緊急ボタンが押されました"
+            android:textSize="66sp"
+            android:textColor="#64B8C3" />
+
+        <Button
+            android:id="@+id/btn_close"
+            android:layout_width="566dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="18dp"
+            android:backgroundTint="#64B8C3"
+            android:text="閉じる"
+            android:textSize="68sp" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/overlay_dialog_flash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#242323"
+        android:visibility="gone" />
+</FrameLayout>
+
