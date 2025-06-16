@@ -73,8 +73,6 @@ public class PushService extends Service {
     private static final int FULLSCREEN_NOTIFICATION_ID = 10010;
     private static final String MESSAGE_PS_001 = "ネットワークが利用できません。";
 
-
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -137,10 +135,11 @@ public class PushService extends Service {
                     Log.e("NaoMiMode", "失敗しました。", e);
                 }
             }
-
             @Override
             public void onMessage(WebSocket webSocket, String text) {
                 Log.i("NaoMiMode", "WS onMessage: " + text);
+                // 临时用 SharedPreferences 保存
+                SharedPreferences lastArrive = getSharedPreferences(PREFS, MODE_PRIVATE);
 
                 try {
                     JSONObject msg = new JSONObject(text);
@@ -184,15 +183,32 @@ public class PushService extends Service {
                         return;
                     }
                     else if (ARRIVE.equals(eventType)
-                            && pointinfo.equals(myPointInfo)
                             && !HOME.equals(pointinfo)) {
-                        dispatchDismiss(pointinfo);
-                        dispatchShow(pointinfo, eventType);
+                        Log.i("NaoMiMode", "[调试] 当前消息 text: " + text);
+                        Log.i("NaoMiMode", "[调试] 当前解析出的 pointinfo=" + pointinfo);
+                        String last = lastArrive.getString("LAST_ARRIVE_POINTINFO", null);
+                        Log.i("NaoMiMode", "[调试] 上一次保存的 pointinfo=" + last);
+                        if (last != null && !last.equals(pointinfo)) {
+                            Log.i("NaoMiMode", "[调试] pointinfo 发生变化，关闭上一次=" + last);
+                            dispatchDismiss(last);
+                        }
+
+                        if (pointinfo.equals(myPointInfo)) {
+                            dispatchDismiss(pointinfo);
+                            dispatchShow(pointinfo, eventType);
+                            lastArrive.edit().putString("LAST_ARRIVE_POINTINFO", pointinfo).apply();
+                        }
                         return;
                     }
                     else if (LEAVE.equals(eventType)
                             && pointinfo.equals(myPointInfo)
                             && !HOME.equals(pointinfo)) {
+                        String last = lastArrive.getString("LAST_ARRIVE_POINTINFO", null);
+                        if (pointinfo.equals(last)) {
+                            lastArrive.edit().remove("LAST_ARRIVE_POINTINFO").apply();
+                            Log.i("NaoMiMode", "WS LEAVE: 清除 lastArrivePointInfo=" + last);
+                        }
+
                         dispatchDismiss(pointinfo);
                         return;
                     }
