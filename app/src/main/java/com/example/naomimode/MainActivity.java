@@ -407,6 +407,13 @@ public class MainActivity extends AppCompatActivity {
             arrivalDialog.dismiss();
         });
 
+        long lastTime = System.currentTimeMillis();
+        getSharedPreferences("app_prefs", MODE_PRIVATE)
+                .edit()
+                .putLong("lastTime", lastTime)
+                .apply();
+
+
     }
 
 private void startHomeLoop() {

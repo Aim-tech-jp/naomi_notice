@@ -1,8 +1,6 @@
 package com.example.naomimode;
 
 import android.annotation.SuppressLint;
-import android.app.ActivityManager;
-import android.app.KeyguardManager;
 import android.app.NotificationManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -19,7 +17,6 @@ import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
@@ -34,23 +31,29 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import org.json.JSONException;
 import org.json.JSONObject;
-import android.graphics.Color;
+
 import android.Manifest;
 import android.widget.Toast;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
 
 
 public class PushService extends Service {
     private static final String CHANNEL_ID = "push_service_channel";
-    private static final String PREFS    = "app_prefs";
-    private static final int    ONGOING_ID = 1;
-    private OkHttpClient client;
-    private WebSocket     ws;
+    private static final String PREFS = "app_prefs";
+    private static final int ONGOING_ID = 1;
+    private WebSocket ws;
     private static final String WS_URL = "ws://ec2-54-250-56-242.ap-northeast-1.compute.amazonaws.com:8001/v1/ws/robot/naomi";
-    private static final Handler  handler = new Handler();
+    //private static final String WS_URL = "ws://192.168.100.44:8001/v1/ws/robot/naomi";
+    private static final Handler handler = new Handler();
     private enum WsState { CONNECTING, OPEN, CLOSING, CLOSED, FAILED }
-    private WsState wsState = WsState.CONNECTING;
-    private static final String KEY_ROBOTID   = "qr_robot_id";
-    private static final String KEY_PWD  = "qr_auth_key";
+    private WsState wsState = WsState.CLOSED;
+    private static final String KEY_ROBOTID = "qr_robot_id";
+    private static final String KEY_PWD = "qr_auth_key";
     private static final String KEY_ROOM = "qr_room_id";
     private static final String ARRIVE ="arrive";
     private static final String LEAVE ="leave";
@@ -64,20 +67,106 @@ public class PushService extends Service {
     private static final String EVENT_TYPE = "event_type";
     private static final String FROM_PUSH = "from_push";
     private static final long RECONNECT_DELAY_MS = 5000;
-    // 用于去重
+    private static final long HEARTBEAT_INTERVAL = 15000;
     private String lastEventKey = "";
-    private long   lastEventTime = 0;
-    // 重复阈值，3 秒
+    private long lastEventTime = 0;
     private static final long DEDUP_INTERVAL_MS = 3_000;
+    private long lastPongTime = 0;
+    private boolean isSubscribed = false;
+    private static final long HEARTBEAT_TIMEOUT = 10000L;
     private static final String FULLSCREEN_CHANNEL_ID = "push_fullscreen_channel";
     private static final int FULLSCREEN_NOTIFICATION_ID = 10010;
     private static final String MESSAGE_PS_001 = "ネットワークが利用できません。";
+    private static OkHttpClient client;
+    private static final long FORCE_RECONNECT_INTERVAL = 10 * 60 * 1000; // 10 分钟
+    private static OkHttpClient getClientInstance() {
+        if (client == null) {
+            synchronized (PushService.class) {
+                if (client == null) {
+                    client = new OkHttpClient();
+                }
+            }
+        }
+        return client;
+    }
+
+    private final Runnable heartbeatRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (ws != null && wsState == WsState.OPEN) {
+                SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+                String myRobotId   = sp.getString(KEY_ROBOTID, "");
+                String clientId = Utils.getAndroidId(PushService.this) + "_" + sp.getString(KEY_ROOM, "");
+                String authKey = Utils.getPref(PushService.this, KEY_PWD);
+                try {
+                    JSONObject ping = new JSONObject();
+                    ping.put("type", "ping");
+                    ping.put("client_id", clientId);
+                    ping.put("auth_key", authKey);
+                    ping.put(ROBOT_ID, myRobotId);
+                    boolean sent = ws.send(ping.toString());
+                    if (!sent) {
+                        Log.w("NaoMiMode", "心跳发送失败，尝试断开重连");
+                        forceReconnect();
+                    } else {
+                        Log.d("NaoMiMode", "ping sent");
+                    }
+                } catch (JSONException e) {
+                    Log.e("NaoMiMode", "构造 ping 消息失败", e);
+                }
+
+                Log.w("NaoMiMode", "ping now:" +System.currentTimeMillis());
+                Log.w("NaoMiMode", "ping lastPongTime:" +lastPongTime);
+                Log.w("NaoMiMode", "ping HEARTBEAT_TIMEOUT:" +HEARTBEAT_TIMEOUT);
+                if (System.currentTimeMillis() - lastPongTime > HEARTBEAT_TIMEOUT) {
+                    Log.w("NaoMiMode", "ping 失败或 pong 超时，尝试重连");
+                    forceReconnect();
+                }
+            }
+            handler.postDelayed(this, RECONNECT_DELAY_MS);
+        }
+    };
+
+    private void forceReconnect() {
+        if (ws != null) {
+            try {
+                ws.cancel();
+            } catch (Exception e) {
+                Log.e("NaoMiMode", "ws.cancel() error", e);
+            }
+            ws = null;
+        }
+        wsState = WsState.FAILED;
+        tryReconnectWebSocket();
+    }
+
+    private boolean isWebSocketIdle() {
+        return ws == null || wsState == WsState.CLOSED || wsState == WsState.FAILED;
+    }
+
+    private int retryAttempt = 0;
+
+    private void tryReconnectWebSocket() {
+        if (isWebSocketIdle()) {
+            long delay = Math.min(RECONNECT_DELAY_MS * (1 << retryAttempt), 60_000);
+            Log.i("NaoMiMode", "尝试重新连接 WebSocket，延迟: " + delay + "ms");
+            handler.postDelayed(this::connectWebSocket, delay);
+            retryAttempt++;
+        } else {
+            retryAttempt = 0;
+            Log.i("NaoMiMode", "WebSocket 正常，不需要重连");
+        }
+    }
+
 
     @Override
     public void onCreate() {
         super.onCreate();
+        //client = new OkHttpClient();
         createChannel();
-        connectWebSocket();
+        tryReconnectWebSocket();
+        handler.postDelayed(heartbeatRunnable, RECONNECT_DELAY_MS);
+       // handler.postDelayed(forceReconnectRunnable, FORCE_RECONNECT_INTERVAL);
         startForeground(ONGOING_ID, buildNotification(SETSUZOKU));
     }
 
@@ -102,49 +191,88 @@ public class PushService extends Service {
                 .build();
     }
     private void connectWebSocket() {
+        if (ws != null) {
+            try {
+                ws.cancel();
+            } catch (Exception ignored) {}
+            ws = null;
+        }
         if (!isNetworkAvailable()) {
+            Log.w("NaoMiMode", "WebSocket 网络不可用");
             handler.post(() -> Toast.makeText(PushService.this,
                     MESSAGE_PS_001, Toast.LENGTH_SHORT).show());
-            handler.postDelayed(this::connectWebSocket, RECONNECT_DELAY_MS);
+            handler.postDelayed(this::tryReconnectWebSocket, RECONNECT_DELAY_MS);
             return;
         }
-        client = new OkHttpClient();
-        String url = WS_URL
-                + "?client_id="    + Utils.getAndroidId(PushService.this)
-                + "&auth_key="    + Utils.getPref(PushService.this, KEY_PWD);
-        Log.i("NaoMiMode", "url" + url);
-        Request req = new Request.Builder()
-                .url(url)
-                .build();
-        wsState = WsState.CONNECTING;
-        Log.i("NaoMiMode", "wsState:" +wsState);
+        if (wsState == WsState.CONNECTING || wsState == WsState.OPEN) {
+            Log.w("NaoMiMode", "WebSocket 正在连接或已连接，忽略重复调用");
+            return;
+        }
 
-        ws = client.newWebSocket(req, new WebSocketListener() {
+        SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String myPointInfo = sp.getString(KEY_ROOM, "");
+        String url = WS_URL
+                + "?client_id=" + Utils.getAndroidId(PushService.this)+  "_" + myPointInfo
+                + "&auth_key=" + Utils.getPref(PushService.this, KEY_PWD);
+        Log.i("NaoMiMode", "connectWebSocket url" + url);
+        Request req = new Request.Builder().url(url).build();
+        wsState = WsState.CONNECTING;
+        Log.i("NaoMiMode", "wsState:" + wsState);
+
+        ws = getClientInstance().newWebSocket(req, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 wsState = WsState.OPEN;
-                Log.i("NaoMiMode", "wsState:" +wsState);
+                Log.i("NaoMiMode", "wsState:" + wsState);
+                isSubscribed = false;
+                lastPongTime = System.currentTimeMillis();
+
+                Log.i("NaoMiMode", "wsState:" + wsState);
                 Log.i("NaoMiMode", "WS onOpen:" + response.code());
                 try {
                     JSONObject sub = new JSONObject();
-                    sub.put("type",   "subscribe");
-                    sub.put(ROBOT_ID,   Utils.getPref(PushService.this, KEY_ROBOTID));
+                    sub.put("type", "subscribe");
+                    sub.put(ROBOT_ID, Utils.getPref(PushService.this, KEY_ROBOTID));
                     webSocket.send(sub.toString());
                     Log.i("NaoMiMode", "WS onOpen　sub: " + sub);
                 } catch (JSONException e) {
                     Log.e("NaoMiMode", "失敗しました。", e);
                 }
+                handler.postDelayed(() -> {
+                    if (wsState != WsState.OPEN) return;
+                    if (isSubscribed == false) {
+                        Log.w("NaoMiMode", "虽然onOpen，订阅超时，强制重连");
+                        forceReconnect();
+                    }
+                }, 10000);
             }
             @Override
             public void onMessage(WebSocket webSocket, String text) {
                 Log.i("NaoMiMode", "WS onMessage: " + text);
-                // 临时用 SharedPreferences 保存
                 SharedPreferences lastArrive = getSharedPreferences(PREFS, MODE_PRIVATE);
+                EventDedupManager dedupManager = EventDedupManager.getInstance(PushService.this);
 
                 try {
                     JSONObject msg = new JSONObject(text);
+                    String type = msg.optString("type");
+                    if ("pong".equals(type)) {
+                        Log.d("NaoMiMode", "pong received");
+                        lastPongTime = System.currentTimeMillis();
+                        return;
+                    } else if ("subscription_confirmed".equals(type)) {
+                        Log.i("NaoMiMode", "服务端已确认订阅成功 robot_id=" + msg.optString("robot_id"));
+                        Log.i("NaoMiMode", "订阅成功，连接有效");
+                            isSubscribed = true;
+                        return;
+                    }
+                    if (isSubscribed == false) {
+                        Log.w("NaoMiMode", "收到消息但订阅失败");
+                        return;
+                    }
+
                     String robotId   = msg.optString(ROBOT_ID);
                     String eventType = msg.optString(EVENT_TYPE);
+                    String createTime = msg.optString("timestamp");
                     JSONObject payload = msg.optJSONObject("payload");
                     String pointinfo = "";
                     String status = "";
@@ -157,20 +285,30 @@ public class PushService extends Service {
                     String myRobotId   = sp.getString(KEY_ROBOTID, "");
                     String myPointInfo = sp.getString(KEY_ROOM, "");
 
-                    // 只处理本设备
                     if (!robotId.equals(myRobotId)) return;
-                    // —— 1. 紧急 ——
-                    // 构造去重 key
-                    String key = eventType + "#" + pointinfo + "#" + status;
-                    long now = System.currentTimeMillis();
-                    if (key.equals(lastEventKey) && now - lastEventTime < DEDUP_INTERVAL_MS) {
-                        // 重复消息，忽略
+                    if (!(ARRIVE.equals(eventType) || LEAVE.equals(eventType) || EMERGENCY.equals(eventType))) return;
+
+                    String dedupKey = eventType + "#" + pointinfo + "#" + status;
+                    String eventType1="";
+                    String pointinfo1="";
+
+                    if (EMERGENCY.equals(eventType)) {
+                        eventType1 = eventType;
+                        pointinfo1 = "home";
+                    } else if (ARRIVE.equals(eventType) || LEAVE.equals(eventType)) {
+                        eventType1 = eventType;
+                        pointinfo1 = pointinfo;
+                    } else {
                         return;
                     }
-                    lastEventKey = key;
-                    lastEventTime = now;
+                    long newTime = parseCreateTimeToMillis(createTime);
+                    if (newTime < 0) {
+                        return;
+                    }
+                    if (dedupManager.isDuplicate(eventType1,pointinfo1,newTime)) {
+                        return;
+                    }
 
-                    // 下面按原逻辑互斥分支
                     if (EMERGENCY.equals(eventType)) {
                         dispatchDismiss(HOME);
                         if (ON.equals(status))   dispatchShow(HOME, eventType);
@@ -184,35 +322,35 @@ public class PushService extends Service {
                     }
                     else if (ARRIVE.equals(eventType)
                             && !HOME.equals(pointinfo)) {
-                        Log.i("NaoMiMode", "[调试] 当前消息 text: " + text);
-                        Log.i("NaoMiMode", "[调试] 当前解析出的 pointinfo=" + pointinfo);
-                        String last = lastArrive.getString("LAST_ARRIVE_POINTINFO", null);
-                        Log.i("NaoMiMode", "[调试] 上一次保存的 pointinfo=" + last);
+                        String last = dedupManager.getLastArriveRoom();
                         if (last != null && !last.equals(pointinfo)) {
                             Log.i("NaoMiMode", "[调试] pointinfo 发生变化，关闭上一次=" + last);
                             dispatchDismiss(last);
                         }
 
                         if (pointinfo.equals(myPointInfo)) {
-                            dispatchDismiss(pointinfo);
+                            dispatchDismiss(pointinfo); // 冗余关闭
                             dispatchShow(pointinfo, eventType);
-                            lastArrive.edit().putString("LAST_ARRIVE_POINTINFO", pointinfo).apply();
                         }
+
+                        dedupManager.updateLastArriveRoom(pointinfo);
                         return;
                     }
                     else if (LEAVE.equals(eventType)
                             && pointinfo.equals(myPointInfo)
                             && !HOME.equals(pointinfo)) {
-                        String last = lastArrive.getString("LAST_ARRIVE_POINTINFO", null);
-                        if (pointinfo.equals(last)) {
-                            lastArrive.edit().remove("LAST_ARRIVE_POINTINFO").apply();
-                            Log.i("NaoMiMode", "WS LEAVE: 清除 lastArrivePointInfo=" + last);
-                        }
+//                        String last = lastArrive.getString("LAST_ARRIVE_POINTINFO", null);
+//                        if (pointinfo.equals(last)) {
+//                            lastArrive.edit().remove("LAST_ARRIVE_POINTINFO").apply();
+//                            Log.i("NaoMiMode", "WS LEAVE: 清除 lastArrivePointInfo=" + last);
+//                        }
 
                         dispatchDismiss(pointinfo);
                         return;
                     }
-                } catch (JSONException ignored) { }
+                } catch (JSONException e) {
+                    Log.e("NaoMiMode", "消息解析失败:", e);
+                }
             }
 
             @Override
@@ -226,39 +364,63 @@ public class PushService extends Service {
             public void onClosed(WebSocket webSocket, int code, String reason) {
                 wsState = WsState.CLOSED;
                 Log.i("NaoMiMode", "WS onClosed: code=" + code + "，原因=" + reason);
+                ws = null;
+                handler.postDelayed(() -> tryReconnectWebSocket(), RECONNECT_DELAY_MS);
             }
 
             @Override
             public void onFailure(WebSocket webSocket, Throwable t, Response response) {
                 wsState = WsState.FAILED;
                 Log.e("NaoMiMode", "WS onFailure: 接続に失敗するか、異常に切断されました", t);
-                if (response != null) {
-                    Log.e("NaoMiMode",
-                            "  HTTP code=" + response.code()
-                                    + "，message=" + response.message());
+
+                if (t instanceof java.net.ConnectException) {
+                    Log.e("NaoMiMode", "连接被服务器拒绝，检查服务器是否在线、端口是否开放");
                 }
+
+                if (response != null) {
+                    Log.e("NaoMiMode", "  HTTP code=" + response.code() + "，message=" + response.message());
+                }
+
                 ws = null;
-                handler.postDelayed(() -> connectWebSocket(), 3000);
+                handler.postDelayed(() -> tryReconnectWebSocket(), RECONNECT_DELAY_MS);
             }
+
         });
+    }
+    private long parseCreateTimeToMillis(String createTime) {
+        if (createTime == null || createTime.length() < 23) {
+            Log.w("NaoMiMode", "create_time 格式不合法: " + createTime);
+            return -1;
+        }
+
+        String trimmed = createTime.substring(0, 23);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        try {
+            Date date = sdf.parse(trimmed);
+            if (date != null) {
+                return date.getTime();
+            }
+        } catch (Exception e) {
+            Log.e("NaoMiMode", "create_time 解析失败: " + createTime, e);
+        }
+
+        return -1;
     }
 
     private void dispatchShow(String pointinfo, String eventType) {
-        // —— 1. 先短暂唤醒屏幕 ——
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
-            // FULL_WAKE_LOCK 在 SDK ≤ 16 时可用；在更高版本与 ACQUIRE_CAUSES_WAKEUP 一起使用仍然有效
             PowerManager.WakeLock wakeLock = pm.newWakeLock(
                     PowerManager.SCREEN_BRIGHT_WAKE_LOCK
                             | PowerManager.ACQUIRE_CAUSES_WAKEUP
                             | PowerManager.ON_AFTER_RELEASE,
                     "NaoMiMode:WakeLock"
             );
-            // 点亮屏幕 5 秒
             wakeLock.acquire(5_000L);
         }
 
-        // —— 2. 统一走广播 ——
         Intent broadcast = new Intent("com.example.naomimode.SHOW_ARRIVAL_DIALOG");
         broadcast.putExtra("roomNo", pointinfo);
         broadcast.putExtra("eventType", eventType);
@@ -309,46 +471,8 @@ public class PushService extends Service {
         if (client != null) {
             client.dispatcher().executorService().shutdown();
         }
-    }
-
-    private void sendHeadsUpNotification(String roomNo,String eventType) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    FULLSCREEN_CHANNEL_ID,
-                    "通知",
-                    NotificationManager.IMPORTANCE_HIGH  // HIGH 才能悬浮
-            );
-            channel.setDescription("ロボットが到着しました。通知をクリックしてください。");
-            NotificationManager nm = getSystemService(NotificationManager.class);
-            if (nm != null) nm.createNotificationChannel(channel);
-        }
-
-        Intent tapIntent = new Intent(this, MainActivity.class);
-        tapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        tapIntent.putExtra(FROM_PUSH, true);
-        tapIntent.putExtra("roomNo", roomNo);
-        tapIntent.putExtra("eventType", eventType);
-
-        PendingIntent tapPending = PendingIntent.getActivity(
-                this, 0, tapIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, FULLSCREEN_CHANNEL_ID)
-                .setSmallIcon(R.drawable.aimlogo_white)
-                .setContentTitle("ロボットが到着しました。")
-                .setContentText("部屋 " + roomNo + "に到着しました。クリックして表示")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setAutoCancel(true)
-                .setContentIntent(tapPending);
-
-        NotificationManagerCompat.from(this).notify(FULLSCREEN_NOTIFICATION_ID, builder.build());
+        handler.removeCallbacks(heartbeatRunnable);
+        //handler.removeCallbacks(forceReconnectRunnable);
     }
 
     @SuppressLint("InvalidWakeLockTag")
