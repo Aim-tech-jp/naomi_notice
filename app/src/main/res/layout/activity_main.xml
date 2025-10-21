@@ -7,6 +7,7 @@
     android:background="@color/white"
     tools:context=".MainActivity">
 
+
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
@@ -15,11 +16,57 @@
         <ImageView
             android:id="@+id/tv_welcome"
             android:layout_width="match_parent"
-            android:layout_height="400dp"
+            android:layout_height="match_parent"
             android:layout_gravity="center"
             android:scaleType="centerInside"
             android:src="@drawable/aimlogo" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_gravity="center">
+
+            <TextView
+                android:id="@+id/tv_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="32sp"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/tv_subinfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text=""
+                android:textSize="20sp"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/tv_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text=""
+                android:textSize="18sp"
+                android:gravity="center"/>
+
+            <Button
+                android:id="@+id/btn_stop_voice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="#64B8C3"
+                android:text="閉じる"
+                android:textSize="68sp"
+                android:visibility="gone"/>
+        </LinearLayout>
+
     </FrameLayout>
+
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -50,7 +97,6 @@
                     android:layout_marginEnd="16dp"
                     android:padding="8dp"/>
             </RelativeLayout>
-
         </androidx.appcompat.widget.Toolbar>
     </RelativeLayout>
     <!-- 引き出しメニュー -->
@@ -68,11 +114,12 @@
             android:layout_height="100dp"
             android:background="@drawable/sn_base"
             android:padding="8dp"
-            android:visibility="gone">
+            android:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/sn_base"
                 android:orientation="vertical">
 
                 <TextView
@@ -93,68 +140,52 @@
                     android:visibility="visible"/>
             </LinearLayout>
         </FrameLayout>
-
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:background="@drawable/sn_base"
-            android:padding="8dp">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="bottom">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="66dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
                 <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="部屋番号："
-                    android:textSize="16sp"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginLeft="4dp"/>
-
-                <EditText
-                    android:id="@+id/tv_room"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:layout_marginLeft="4dp"
-                    android:inputType="text"
-                    android:focusable="false"
-                    android:cursorVisible="false"
-                    android:longClickable="false"/>
-            </LinearLayout>
-        </FrameLayout>
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:background="@drawable/sn_base"
-            android:padding="8dp"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                    android:id="@+id/sw_flash"
+                    android:layout_width="180dp"
+                    android:layout_height="60dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_round_button"
+                    android:text="flash"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginTop="32dp"
+                    android:visibility="visible"/>
 
                 <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="パスワード："
-                    android:textSize="16sp" />
+                    android:id="@+id/sw_dialog"
+                    android:layout_width="180dp"
+                    android:layout_height="60dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_round_button"
+                    android:text="dialog"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginTop="32dp"
+                    android:visibility="visible"/>
 
-                <EditText
-                    android:id="@+id/tv_pwd"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:inputType="text"
-                    android:focusable="false"
-                    android:cursorVisible="false"
-                    android:longClickable="false"/>
             </LinearLayout>
-        </FrameLayout>
+        </LinearLayout>
+
+
     </LinearLayout>
 
     <View

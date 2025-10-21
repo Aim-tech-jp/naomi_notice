@@ -1,0 +1,25 @@
+<!--<shape xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    android:shape="rectangle">-->
+<!--    &lt;!&ndash; 背景颜色 &ndash;&gt;-->
+<!--    <solid android:color="#84B9C3"/>-->
+<!--    &lt;!&ndash; 圆角半径 &ndash;&gt;-->
+<!--    <corners android:radius="40dp"/>-->
+<!--</shape>-->
+
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#023E45"/> <!-- 比 #84B9C3 更深一点 -->
+            <corners android:radius="40dp"/>
+        </shape>
+    </item>
+
+    <!-- 默认 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#84B9C3"/>
+            <corners android:radius="40dp"/>
+        </shape>
+    </item>
+</selector>

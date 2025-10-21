@@ -1,0 +1,8 @@
+{
+  "mqtt": {
+    "url": "tcp://mqtt.naomi.futurerobo.jp:1884",
+    "username": "keihan",
+    "password": "Robot01!2025",
+    "topicPrefix": "naomi_robot_callback_"
+  }
+}
