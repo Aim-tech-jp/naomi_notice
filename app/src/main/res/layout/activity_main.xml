@@ -12,93 +12,105 @@
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
-        <ImageView
-            android:id="@+id/tv_welcome"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:scaleType="centerInside"
-            android:src="@drawable/aimlogo" />
+            android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_gravity="center">
-
-            <TextView
-                android:id="@+id/tv_status"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textSize="32sp"
-                android:gravity="center"/>
+                android:layout_height="0dp"
+                android:layout_weight="3"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingHorizontal="4dp">
 
-            <TextView
-                android:id="@+id/tv_subinfo"
+                <TextView
+                    android:id="@+id/tv_subinfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:layout_marginTop="12dp"
+                    android:maxLines="3"
+                    android:text=""
+                    android:textSize="68sp" />
+
+                <TextView
+                    android:id="@+id/tv_time"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text=""
+                    android:textSize="30sp"
+                    android:gravity="center" />
+
+                <Button
+                    android:id="@+id/btn_stop_voice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="80dp"
+                    android:backgroundTint="#49677A"
+                    android:text="閉じる"
+                    android:textSize="58sp"
+                    android:visibility="gone"
+                    android:translationX="-5dp" />
+            </LinearLayout>
+
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text=""
-                android:textSize="20sp"
-                android:gravity="center"/>
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center">
 
-            <TextView
-                android:id="@+id/tv_time"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text=""
-                android:textSize="18sp"
-                android:gravity="center"/>
+                <ImageView
+                    android:id="@+id/tv_welcome"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/aimlogo"
+                    android:alpha="0.6" />
+            </FrameLayout>
 
-            <Button
-                android:id="@+id/btn_stop_voice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:backgroundTint="#64B8C3"
-                android:text="閉じる"
-                android:textSize="68sp"
-                android:visibility="gone"/>
         </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- ヘッダー情報 -->
+            <androidx.appcompat.widget.Toolbar xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="#BCE9F0"
+                app:contentInsetEnd="0dp"
+                app:contentInsetStart="0dp"
+                app:contentInsetStartWithNavigation="0dp">
+
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center">
+
+                    <ImageView
+                        android:id="@+id/ivMenuToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginEnd="16dp"
+                        android:padding="8dp"
+                        android:src="@drawable/menu"
+                        android:alpha="0.1"/>
+                </RelativeLayout>
+            </androidx.appcompat.widget.Toolbar>
+        </RelativeLayout>
 
     </FrameLayout>
 
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <!-- ヘッダー情報 -->
-        <androidx.appcompat.widget.Toolbar
-            xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#BCE9F0"
-            app:contentInsetStart="0dp"
-            app:contentInsetEnd="0dp"
-            app:contentInsetStartWithNavigation="0dp">
-            <RelativeLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_gravity="center">
-                <ImageView
-                    android:id="@+id/ivMenuToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/menu"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="16dp"
-                    android:padding="8dp"/>
-            </RelativeLayout>
-        </androidx.appcompat.widget.Toolbar>
-    </RelativeLayout>
     <!-- 引き出しメニュー -->
     <LinearLayout
         android:id="@+id/navMenu"
@@ -119,7 +131,6 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/sn_base"
                 android:orientation="vertical">
 
                 <TextView
@@ -144,7 +155,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="bottom">
+            android:gravity="bottom"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"

@@ -11,16 +11,22 @@ public class EventTextMapper {
                         ? "部屋に到着しました" : ("部屋 " + roomId + " に到着しました");
                 break;
             case "leave":
-                main = "戻ります";
+                main = (roomId == null || roomId.isEmpty())
+                        ? "戻ります" : (roomId + "から戻ります");
                 break;
             case "charging":
                 main = "充電中";
                 break;
             case "emergency":
-                main = "緊急ボタンが押されました";
+                if (state == "on"){
+                    main = "緊急ボタンが押されました";
+                }else {
+                    main = "更新待ち!!!";
+                }
                 break;
             case "alarm":
-                main = "ロボットが助けを求めています";
+                main = (error == null || error.isEmpty())
+                        ? "ロボットが助けを求めています" : (error + " \nロボットが助けを求めています");
                 break;
             case "delivery_running":
                 main = (roomId == null || roomId.isEmpty())
@@ -30,22 +36,22 @@ public class EventTextMapper {
                 main = "お客様による取り出し完了";
                 break;
             case "delivery_fail":
-                main = "受け取りできません。品物を取り出してください。";
+                main = "受け取りできません。\n品物を取り出してください。";
                 break;
             case "elv_wait":
                 main = (floorId == null || floorId.isEmpty())
-                        ? "エレベーターを待っています" : (floorId + " エレベーターを待っています");
+                        ? "エレベーターを待っています" : (floorId + "階 エレベーターを待っています");
                 break;
             case "elv_in":
                 main = (floorId == null || floorId.isEmpty())
-                        ? "エレベーターに乗ります" : (floorId + " エレベーターに乗ります");
+                        ? "エレベーターに乗ります" : (floorId + "階 エレベーターに乗ります");
                 break;
             case "elv_out":
                 main = (floorId == null || floorId.isEmpty())
-                        ? "エレベーターを降ります" : (floorId + " エレベーターを降ります");
+                        ? "エレベーターを降ります" : (floorId + "階 エレベーターを降ります");
                 break;
             default:
-                main = "更新：" + event;
+                main = "更新待ち!!!";
         }
         return main;
     }

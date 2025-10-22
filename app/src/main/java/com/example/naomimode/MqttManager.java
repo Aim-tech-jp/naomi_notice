@@ -1,45 +1,56 @@
 package com.example.naomimode;
 
-
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
-import info.mqtt.android.service.MqttAndroidClient;
-import info.mqtt.android.service.MqttService;
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+
+import info.mqtt.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+
+import java.nio.charset.StandardCharsets;
 
 public class MqttManager {
+
     public interface MsgListener {
-        void onMessage(String topic, String payload);
+        // ✨ 增加 retained/duplicate 两个标志，供上层去重
+        void onMessage(String topic, String payload, boolean isRetained, boolean isDuplicate);
         void onError(Throwable t);
     }
 
     private static final String TAG = "MqttManager";
+
+    private final Context appCtx;
     private final MqttAndroidClient client;
     private final String topic;
     private MsgListener listener;
 
     public MqttManager(Context ctx, String serverUri, String clientId, String topic) {
-        this.client = new MqttAndroidClient(ctx.getApplicationContext(), serverUri, clientId);
+        this.appCtx = ctx.getApplicationContext();
+        this.client = new MqttAndroidClient(appCtx, serverUri, clientId);
         this.topic = topic;
     }
 
     public void connect(String user, String pass, MsgListener lsn) {
         this.listener = lsn;
+
         Log.i(TAG, "========== [CONNECT] 开始 MQTT 连接 ==========");
         Log.i(TAG, "Server URI = " + client.getServerURI());
         Log.i(TAG, "Client ID  = " + client.getClientId());
         Log.i(TAG, "Topic      = " + topic);
 
         MqttConnectOptions opts = new MqttConnectOptions();
+        // ✨ 保持会话，配合 B 方案由上层做去重
+        opts.setCleanSession(false);
         opts.setAutomaticReconnect(true);
-        opts.setCleanSession(true);
 //        opts.setKeepAliveInterval(20);
 //        opts.setConnectionTimeout(10);
         opts.setKeepAliveInterval(30);
@@ -51,34 +62,41 @@ public class MqttManager {
         }
         if (pass != null) {
             opts.setPassword(pass.toCharArray());
-            Log.i(TAG, "Password   = " +pass);
+            Log.i(TAG, "Password   = ******");
         }
 
         client.setCallback(new MqttCallbackExtended() {
-            @Override public void connectComplete(boolean reconnect, String serverURI) {
+            @Override
+            public void connectComplete(boolean reconnect, String serverURI) {
                 Log.i(TAG, "[CALLBACK] connectComplete, reconnect=" + reconnect + ", serverURI=" + serverURI);
                 enableBufferingSafely();
-                trySubscribe();
+
+                LocalBroadcastManager.getInstance(appCtx)
+                        .sendBroadcast(new Intent("com.example.naomimode.MQTT_CONNECTED"));
+
+                trySubscribe(reconnect);
             }
-            @Override public void connectionLost(Throwable cause) {
+
+            @Override
+            public void connectionLost(Throwable cause) {
                 Log.w(TAG, "[CALLBACK] connectionLost: " + (cause == null ? "null" : cause.getMessage()), cause);
             }
-//            @Override public void messageArrived(String t, MqttMessage m) {
-//                Log.i(TAG, "[CALLBACK] messageArrived topic=" + t + ", qos=" + m.getQos() + ", retained=" + m.isRetained());
-//                Log.v(TAG, "[PAYLOAD] " + new String(m.getPayload()));
-//                if (!m.isRetained() && listener != null)
-//                    listener.onMessage(t, new String(m.getPayload()));
-//            }
-            @Override public void messageArrived(String t, MqttMessage m) {
-                String payload = new String(m.getPayload());
-                Log.i(TAG, "[CALLBACK] topic=" + t + ", qos=" + m.getQos() + ", retained=" + m.isRetained());
+
+            @Override
+            public void messageArrived(String t, MqttMessage m) {
+                String payload = new String(m.getPayload(), StandardCharsets.UTF_8).trim();
+                boolean retained = m.isRetained();
+                boolean duplicate = m.isDuplicate();
+                Log.i(TAG, "[CALLBACK] topic=" + t + ", qos=" + m.getQos() + ", retained=" + retained + ", dup=" + duplicate);
                 Log.v(TAG, "[PAYLOAD] " + payload);
+
                 if (listener != null) {
-                    listener.onMessage(topic, payload);
+                    listener.onMessage(t, payload, retained, duplicate);
                 }
             }
 
-            @Override public void deliveryComplete(IMqttDeliveryToken token) {
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
                 Log.i(TAG, "[CALLBACK] deliveryComplete: " + token);
             }
         });
@@ -86,12 +104,19 @@ public class MqttManager {
         try {
             Log.i(TAG, "调用 client.connect() …");
             client.connect(opts, null, new IMqttActionListener() {
-                @Override public void onSuccess(IMqttToken asyncActionToken) {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
                     Log.i(TAG, "[ACTION] 连接成功！");
                     enableBufferingSafely();
-                    trySubscribe();
+
+                    LocalBroadcastManager.getInstance(appCtx)
+                            .sendBroadcast(new Intent("com.example.naomimode.MQTT_CONNECTED"));
+
+                    trySubscribe(false);
                 }
-                @Override public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     Log.e(TAG, "[ACTION] 连接失败: " + exception, exception);
                     if (listener != null) listener.onError(exception);
                 }
@@ -117,17 +142,32 @@ public class MqttManager {
     }
 
     private void trySubscribe() {
+        trySubscribe(false);
+    }
+
+     private void trySubscribe(boolean reconnect) {
         try {
             if (!client.isConnected()) {
                 Log.w(TAG, "订阅前检测：client 未连接！");
                 return;
             }
+            if (reconnect) {
+                try {
+                    Log.i(TAG, "reconnect=true → 先 unsubscribe(" + topic + ")");
+                    client.unsubscribe(topic);
+                } catch (Exception ex) {
+                    Log.w(TAG, "unsubscribe ignored: " + ex.getMessage());
+                }
+            }
             Log.i(TAG, "调用 subscribe(topic=" + topic + ")");
             client.subscribe(topic, 1, null, new IMqttActionListener() {
-                @Override public void onSuccess(IMqttToken asyncActionToken) {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
                     Log.i(TAG, "[ACTION] 订阅成功: " + topic);
                 }
-                @Override public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     Log.e(TAG, "[ACTION] 订阅失败: " + exception, exception);
                     if (listener != null) listener.onError(exception);
                 }

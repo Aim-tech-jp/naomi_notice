@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 主画面控件
-        tvStatus     = findViewById(R.id.tv_status);
+        tvStatus     = findViewById(R.id.tv_subinfo);
         tvSubInfo    = findViewById(R.id.tv_subinfo);
         tvTime       = findViewById(R.id.tv_time);
         btnStopVoice = findViewById(R.id.btn_stop_voice);
@@ -483,7 +483,7 @@ public class MainActivity extends AppCompatActivity {
     // ———————————— 到房间语音：播放3次 ————————————
     private void startArriveVoice() {
         stopArriveVoice();
-        playerArrive = MediaPlayer.create(this, R.raw.karaoke_home);
+        playerArrive = MediaPlayer.create(this, R.raw.arrival_aoi);
         arriveCount = 0;
         arriveHandler = new Handler(Looper.getMainLooper());
         arriveRunnable = () -> {
