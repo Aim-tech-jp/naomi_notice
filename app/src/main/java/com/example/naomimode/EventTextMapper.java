@@ -15,10 +15,13 @@ public class EventTextMapper {
                         ? "戻ります" : (roomId + "から戻ります");
                 break;
             case "charging":
-                main = "充電中";
+                    main = "充電中";
+                break;
+            case "initialize_done":
+                    main = "待機中";
                 break;
             case "emergency":
-                if (state == "on"){
+                if ("on".equals(state)){
                     main = "緊急ボタンが押されました";
                 }else {
                     main = "更新待ち!!!";

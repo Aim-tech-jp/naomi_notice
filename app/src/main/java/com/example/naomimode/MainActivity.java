@@ -105,10 +105,16 @@ public class MainActivity extends AppCompatActivity {
                                     enforceRobotIdSafely();
                                     return;
                                 }
-                                getSharedPreferences(PREFS, MODE_PRIVATE)
-                                        .edit()
+//                                getSharedPreferences(PREFS, MODE_PRIVATE)
+//                                        .edit()
+//                                        .putString(KEY_ROBOTID, robot_id)
+//                                        .apply();
+                                SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+                                sp.edit()
                                         .putString(KEY_ROBOTID, robot_id)
                                         .apply();
+                                String savedCode   = sp.getString(KEY_ROBOTID, "");
+                                robotIdEt.setText(savedCode);
                                 recreate();
                             } catch (JSONException e) {
                                 Toast.makeText(this, "QRコードの内容が期待された JSON 形式ではありません", Toast.LENGTH_SHORT).show();
@@ -162,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
         initCameraFlashAvailability();
 
         SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
-        flashEnabled = sp.getBoolean(KEY_FLASH_ENABLED, true);
+        flashEnabled = sp.getBoolean(KEY_FLASH_ENABLED, false);
         dialogMode   = sp.getBoolean(KEY_DIALOG_MODE,   false);
 
         initUI();
