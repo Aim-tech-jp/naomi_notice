@@ -24,7 +24,7 @@ public class EventTextMapper {
                 if ("on".equals(state)){
                     main = "緊急ボタンが押されました";
                 }else {
-                    main = "更新待ち!!!";
+                    main = "更新待ち!!";
                 }
                 break;
             case "alarm":

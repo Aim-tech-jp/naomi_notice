@@ -436,7 +436,11 @@ public class MainActivity extends AppCompatActivity {
             String state    = intent.getStringExtra("state");
             String error    = intent.getStringExtra("error_code");
             long   ts       = intent.getLongExtra("timestamp_ms", System.currentTimeMillis());
+            if ("0".equals(floorId) || "0.0".equals(floorId) || "null".equalsIgnoreCase(floorId)) {
+                floorId = "";
+            }
             Log.i("mainActivity", "---mainActivity- roomId=----"+roomId);
+            Log.i("mainActivity", "---mainActivity- floorId=----"+floorId);
             if (!hasRobotId()) {
                 enforceRobotIdSafely();
                 return;
