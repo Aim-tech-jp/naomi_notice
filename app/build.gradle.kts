@@ -51,6 +51,9 @@ android {
 }
 
 dependencies {
+    implementation ("com.squareup.okhttp3:okhttp:4.11.0")
+
+
     //MQTT请求依赖用
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation("com.github.hannesa2:paho.mqtt.android:4.4.2")

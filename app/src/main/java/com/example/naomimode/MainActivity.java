@@ -45,7 +45,7 @@ import io.github.g00fy2.quickie.QRResult;
 import io.github.g00fy2.quickie.ScanCustomCode;
 import io.github.g00fy2.quickie.config.BarcodeFormat;
 import io.github.g00fy2.quickie.config.ScannerConfig;
-
+import com.example.naomimode.SlackLogger;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
@@ -233,7 +233,6 @@ public class MainActivity extends AppCompatActivity {
         drawer       = findViewById(R.id.drawer_layout);
         navMenu      = findViewById(R.id.navMenu);
         ivMenuToggle = findViewById(R.id.ivMenuToggle);
-
         if (ivMenuToggle != null) {
             ivMenuToggle.setOnClickListener(v -> {
                 if (drawer != null) {

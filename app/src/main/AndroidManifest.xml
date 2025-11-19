@@ -40,7 +40,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name="org.eclipse.paho.android.service.MqttService"
+            android:name="info.mqtt.android.service.MqttService"
             android:exported="false" />
         <service
             android:name=".PushService"

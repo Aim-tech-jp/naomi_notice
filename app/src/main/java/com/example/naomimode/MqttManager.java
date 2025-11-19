@@ -106,6 +106,7 @@ public class MqttManager {
             client.connect(opts, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+                    SlackLogger.log("niigata", "[ACTION] 连接成功！");
                     Log.i(TAG, "[ACTION] 连接成功！");
                     enableBufferingSafely();
 
@@ -117,6 +118,7 @@ public class MqttManager {
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    SlackLogger.log("niigata", "[ACTION] 连接失败！");
                     Log.e(TAG, "[ACTION] 连接失败: " + exception, exception);
                     if (listener != null) listener.onError(exception);
                 }
@@ -163,6 +165,7 @@ public class MqttManager {
             client.subscribe(topic, 1, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+                    SlackLogger.log("niigata", "[ACTION] 订阅成功: " + topic);
                     Log.i(TAG, "[ACTION] 订阅成功: " + topic);
                 }
 
