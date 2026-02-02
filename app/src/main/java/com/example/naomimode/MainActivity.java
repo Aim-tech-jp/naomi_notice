@@ -438,7 +438,7 @@ public class MainActivity extends AppCompatActivity {
             if ("0".equals(floorId) || "0.0".equals(floorId) || "null".equalsIgnoreCase(floorId)) {
                 floorId = "";
             }
-            Log.i("mainActivity", "---mainActivity- roomId=----"+roomId);
+            Log.i("mainActivity",  "event="+ event +"roomId="+ roomId +"floorId="+ floorId +"state="+ state +"error="+ error);
             Log.i("mainActivity", "---mainActivity- floorId=----"+floorId);
             if (!hasRobotId()) {
                 enforceRobotIdSafely();
@@ -451,6 +451,9 @@ public class MainActivity extends AppCompatActivity {
 
             if ("arrive".equals(event) && roomId != null && !roomId.isEmpty()) {
                 startArriveVoice();
+            }
+            if ("delivery_running".equals(event) && roomId != null && !roomId.isEmpty()) {
+                startRunningVoice();
             }
 
             if (flashEnabled) {
@@ -506,13 +509,41 @@ public class MainActivity extends AppCompatActivity {
         if (playerArrive != null) {
             playerArrive.setOnCompletionListener(mp -> {
                 arriveCount++;
-                if (arriveCount < 3 && arriveHandler != null) {
+                if (arriveCount < 2 && arriveHandler != null) {
                     arriveHandler.postDelayed(arriveRunnable, 2000);
                 } else {
                     stopArriveVoice();
                 }
             });
             if (btnStopVoice != null) btnStopVoice.setVisibility(View.VISIBLE);
+            try { playerArrive.start(); } catch (Exception ignored) {}
+        }
+    }
+
+    // ———————————— 到房间语音：播放1次 ————————————
+    private void startRunningVoice() {
+        stopArriveVoice();
+        playerArrive = MediaPlayer.create(this, R.raw.running_aoi);
+        arriveCount = 0;
+        arriveHandler = new Handler(Looper.getMainLooper());
+        arriveRunnable = () -> {
+            if (playerArrive != null) {
+                try {
+                    playerArrive.seekTo(0);
+                    playerArrive.start();
+                } catch (IllegalStateException ignored) {}
+            }
+        };
+        if (playerArrive != null) {
+            playerArrive.setOnCompletionListener(mp -> {
+                arriveCount++;
+                if (arriveCount < 1 && arriveHandler != null) {
+                    arriveHandler.postDelayed(arriveRunnable, 2000);
+                } else {
+                    stopArriveVoice();
+                }
+            });
+            if (btnStopVoice != null) btnStopVoice.setVisibility(View.GONE);
             try { playerArrive.start(); } catch (Exception ignored) {}
         }
     }

@@ -7,14 +7,19 @@ public class EventTextMapper {
 
         switch (event) {
             case "arrive":
-                main = (roomId == null || roomId.isEmpty())
-                        ? "部屋に到着しました" : ("部屋 " + roomId + " に到着しました");
-                SlackLogger.log("niigata", roomId + "部屋に到着しました");
+//                main = (roomId == null || roomId.isEmpty())
+//                        ? "執務室の前に到着いたしました" : ("部屋 " + roomId + " に到着しました");
+                main = "執務室の前に到着いたしました";
+                SlackLogger.log("niigata", roomId + "執務室の前に到着いたしました");
                 break;
 //            case "leave":
 //                main = (roomId == null || roomId.isEmpty())
 //                        ? "戻ります" : (roomId + "から戻ります");
 //                break;
+            case "delivery_running":
+                main = "今からロボットが執務室へ配送します";
+                SlackLogger.log("niigata", roomId + "今からロボットが執務室へ配送します");
+                break;
             case "charging":
                     main = "充電中";
                 break;
@@ -36,9 +41,10 @@ public class EventTextMapper {
 //                main = (roomId == null || roomId.isEmpty())
 //                        ? "部屋へ配送中" : (roomId + " 部屋へ配送中");
 //                break;
-//            case "delivery_success":
-//                main = "お客様による取り出し完了";
-//                break;
+            case "delivery_success":
+                main = "受取完了しました";
+                SlackLogger.log("niigata", roomId + "受取完了しました");
+                break;
 //            case "delivery_fail":
 //                main = "受け取りできません。\n品物を取り出してください。";
 //                break;

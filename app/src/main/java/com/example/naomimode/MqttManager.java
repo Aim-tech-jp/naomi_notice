@@ -89,7 +89,7 @@ public class MqttManager {
                 boolean duplicate = m.isDuplicate();
                 Log.i(TAG, "[CALLBACK] topic=" + t + ", qos=" + m.getQos() + ", retained=" + retained + ", dup=" + duplicate);
                 Log.v(TAG, "[PAYLOAD] " + payload);
-
+                SlackLogger.log("niigata", "[PAYLOAD] " + payload);
                 if (listener != null) {
                     listener.onMessage(t, payload, retained, duplicate);
                 }

@@ -54,7 +54,7 @@ public class PushService extends Service {
 
     private static final long EVENT_THROTTLE_MS = 5_000L;
 
-    private static final long ROOM_SUPPRESS_MS  = 5_000L;
+    private static final long ROOM_SUPPRESS_MS  = 20_000L;
     private static final long FLOOR_SUPPRESS_MS = 5_000L;
 
     private static final long RECONNECT_WARMUP_MS = 2_000L;
@@ -123,7 +123,7 @@ public class PushService extends Service {
         try {
             Log.i(TAG_MQTT, "---- RAW JSON ----");
             logLong(TAG_MQTT, text);
-
+            SlackLogger.log("niigata_MQTT:", text);
             JSONObject msg = new JSONObject(text);
 
             String robotId = msg.optString("robot_id");
