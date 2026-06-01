@@ -18,8 +18,8 @@ public class SlackLogger {
     private static final OkHttpClient client = new OkHttpClient();
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-    // ✅ 替换成你的 Slack Webhook URL
-    private static final String WEBHOOK_URL = "https://hooks.slack.com/services/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";
+    // Slack Webhook URL
+    private static final String WEBHOOK_URL = "https://hooks.slack.com/services/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";
 
     /** 异步发送日志 */
     public static void log(String rootId, String message) {
