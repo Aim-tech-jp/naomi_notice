@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 public class MqttManager {
 
     public interface MsgListener {
-        // ✨ 增加 retained/duplicate 两个标志，供上层去重
+        //增加 retained/duplicate 两个标志，供上层去重
         void onMessage(String topic, String payload, boolean isRetained, boolean isDuplicate);
         void onError(Throwable t);
     }
@@ -48,7 +48,7 @@ public class MqttManager {
         Log.i(TAG, "Topic      = " + topic);
 
         MqttConnectOptions opts = new MqttConnectOptions();
-        // ✨ 保持会话，配合 B 方案由上层做去重
+        // 保持会话，配合 B 方案由上层做去重
         opts.setCleanSession(false);
         opts.setAutomaticReconnect(true);
 //        opts.setKeepAliveInterval(20);

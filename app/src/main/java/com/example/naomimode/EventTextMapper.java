@@ -45,9 +45,9 @@ public class EventTextMapper {
                 main = "受取完了しました";
                 SlackLogger.log("niigata", roomId + "受取完了しました");
                 break;
-//            case "delivery_fail":
-//                main = "受け取りできません。\n品物を取り出してください。";
-//                break;
+            case "delivery_fail":
+                main = "荷物を受け取れませんでした。";
+                break;
 //            case "elv_wait":
 //                main = (floorId == null || floorId.isEmpty())
 //                        ? "エレベーターを待っています" : (floorId + "階 エレベーターを待っています");

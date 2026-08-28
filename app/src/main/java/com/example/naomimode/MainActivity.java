@@ -455,6 +455,9 @@ public class MainActivity extends AppCompatActivity {
             if ("delivery_running".equals(event) && roomId != null && !roomId.isEmpty()) {
                 startRunningVoice();
             }
+            if ("delivery_fail".equals(event)) {
+                startFailVoice();
+            }
 
             if (flashEnabled) {
                 startFlashAllOnMain();
@@ -520,7 +523,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ———————————— 到房间语音：播放1次 ————————————
+    // ———————————— 前往房间语音：播放1次 ————————————
     private void startRunningVoice() {
         stopArriveVoice();
         playerArrive = MediaPlayer.create(this, R.raw.running_aoi);
@@ -548,6 +551,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ———————————— 到前台语音：播放3次 ————————————
+    private void startFailVoice() {
+        stopArriveVoice();
+        playerArrive = MediaPlayer.create(this, R.raw.fail_aoi);
+        arriveCount = 0;
+        arriveHandler = new Handler(Looper.getMainLooper());
+        arriveRunnable = () -> {
+            if (playerArrive != null) {
+                try {
+                    playerArrive.seekTo(0);
+                    playerArrive.start();
+                } catch (IllegalStateException ignored) {}
+            }
+        };
+        if (playerArrive != null) {
+            playerArrive.setOnCompletionListener(mp -> {
+                arriveCount++;
+                if (arriveCount < 2 && arriveHandler != null) {
+                    arriveHandler.postDelayed(arriveRunnable, 2000);
+                } else {
+                    stopArriveVoice();
+                }
+            });
+            if (btnStopVoice != null) btnStopVoice.setVisibility(View.VISIBLE);
+            try { playerArrive.start(); } catch (Exception ignored) {}
+        }
+    }
     private void stopArriveVoice() {
         if (arriveHandler != null && arriveRunnable != null) {
             arriveHandler.removeCallbacks(arriveRunnable);
